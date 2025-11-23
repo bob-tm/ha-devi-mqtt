@@ -21,11 +21,11 @@
 
     "mode_state_topic": "devi/state/${deviceSN}/select_control_mode",
     "mode_command_topic": "devi/command/${deviceSN}/thermostat_preset",
-    "modes": ["heat", "off", "auto"],
-    "mode_state_template": "{{ 'off' if value == 'OFF' else 'auto' if value == 'SCHEDULE' else 'heat'}}",
-	"mode_command_template": "{{ 'OFF' if value == 'off' else 'SCHEDULE' if value == 'auto' else 'MANUAL'}}",
+    "modes": ["heat", "off"],
+    "mode_state_template": "{{ 'off' if value == 'OFF' else 'heat' }}",
+	"mode_command_template": "{{ 'OFF' if value == 'off' else 'SCHEDULE' }}",
 	
-    "min_temp": 3,
+    "min_temp": 2,
     "max_temp": 40,
     "temp_step": 0.5,
     "temperature_unit": "C",
