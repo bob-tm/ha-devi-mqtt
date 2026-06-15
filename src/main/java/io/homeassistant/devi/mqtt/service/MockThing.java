@@ -19,9 +19,11 @@ import static io.homeassistant.binding.danfoss.internal.DanfossBindingConstants.
 public class MockThing implements Thing {
 
     private String peerId;
+    private String privateKey;
 
-    public MockThing(String peerId) {
+    public MockThing(String peerId, String privateKey) {
         this.peerId = peerId;
+        this.privateKey = privateKey;
     }
 
     private Map<String, String> prorerties = new HashMap<String, String>();
@@ -104,6 +106,7 @@ public class MockThing implements Thing {
 
         Map<String, Object> configMap = new HashMap<>();
         configMap.put(DeviRegConfiguration.PEER_ID, this.peerId);
+        configMap.put(DeviRegConfiguration.PRIVATE_KEY, this.privateKey);
 
         config.setProperties(configMap);
         return config;

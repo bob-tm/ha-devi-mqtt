@@ -209,6 +209,15 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+              <filters>
+                <!-- Use our vendored, patched Connection (write-timeout fix); drop the one from opensdg_java -->
+                <filter>
+                  <artifact>io.github.sonic-amiga:opensdg_java</artifact>
+                  <excludes>
+                    <exclude>io/github/sonic_amiga/opensdg/java/Connection.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <mainClass>io.homeassistant.devi.mqtt.service.ConsoleRunner</mainClass>

@@ -7,6 +7,8 @@ package io.homeassistant.binding.danfoss.internal;
  */
 public class DeviRegConfiguration {
     public static final String PEER_ID = "peerId";
+    public static final String PRIVATE_KEY = "privateKey";
 
     public String peerId;
+    public String privateKey;
 }
