@@ -57,8 +57,6 @@ public class DanfossBindingConfig {
         privateKey = newKey;
         publicKey = DatatypeConverter.printHexBinary(SDG.calcPublicKey(newPrivkey));
         userName = newConfig.userName;
-
-        GridConnectionKeeper.UpdatePrivateKey(newKey);
     }
 
     public static void update(@NonNull Map<@NonNull String, @NonNull Object> config, ConfigurationAdmin admin) {

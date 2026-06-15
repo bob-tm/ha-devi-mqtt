@@ -80,7 +80,7 @@ public class DiscoveryService {
         // Calling the update method
         DanfossBindingConfig.update(configMap, configAdmin);
 
-        GridConnectionKeeper.AddUser();
+        GridConnectionKeeper.AddUser(DanfossBindingConfig.get().privateKey);
         String userName = DanfossBindingConfig.get().userName;
         String houseName = null;
         GridConnection grid = null;
@@ -90,7 +90,7 @@ public class DiscoveryService {
         List<Map<String, String>> roomsList = new ArrayList<>();
 
         try {
-            grid = GridConnectionKeeper.getConnection();
+            grid = GridConnectionKeeper.getConnection(DanfossBindingConfig.get().privateKey);
         } catch (IOException | InterruptedException | ExecutionException | TimeoutException e) {
             //GridConnectionKeeper.RemoveUser();
             return;
@@ -191,7 +191,7 @@ public class DiscoveryService {
             }
 
             cfg.close();
-            GridConnectionKeeper.RemoveUser();
+            GridConnectionKeeper.RemoveUser(DanfossBindingConfig.get().privateKey);
 
             if (errorStr != null) {
                 continue;
@@ -257,7 +257,7 @@ public class DiscoveryService {
 
 
                 DanfossBindingConfig.update(configMap, configAdmin);
-                DeviRegHandler deviRegHandler = new DeviRegHandler(new MockThing(entry.getValue()));
+                DeviRegHandler deviRegHandler = new DeviRegHandler(new MockThing(entry.getValue(), DanfossBindingConfig.get().privateKey));
 
                 MockThingCallback reportingCallback = new MockThingCallback((key, value) -> {
 

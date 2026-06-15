@@ -1,6 +1,8 @@
 package io.homeassistant.binding.danfoss.internal;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeoutException;
@@ -14,62 +16,49 @@ import io.github.sonic_amiga.opensdg.java.GridConnection;
 
 public class GridConnectionKeeper {
     private static final Logger logger = LoggerFactory.getLogger(GridConnectionKeeper.class);
-    private static GridConnection g_Conn;
-    private static int numUsers = 0;
-    private static String privateKey = null;
+    // One grid connection per private key (per house). Devices of the same house
+    // share a single grid connection and multiplex their peer connections over it.
+    private static final Map<String, GridConnection> connections = new HashMap<>();
+    private static final Map<String, Integer> numUsers = new HashMap<>();
 
-    public synchronized static GridConnection getConnection()
+    public synchronized static GridConnection getConnection(String privateKey)
             throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        if (privateKey == null) {
-            privateKey = DanfossBindingConfig.get().privateKey;
-        }
-        if (g_Conn == null) {
-            // We are not necessarily called from within a ThingHandler; it could also be
-            // a DanfossDiscoveryService. Here we are trying to reuse the same named pool
-            // as used by all thing handlers for the sake of resource conservation
-            // A little bit hacky-wacky (because this name is OpenHAB's internal constant),
-            // but we don't want to create yet another pool for such small needs as pinging
-            // the grid connection.
+        GridConnection conn = connections.get(privateKey);
+        if (conn == null) {
             ScheduledExecutorService scheduler = ThreadPoolManager.getScheduledPool("thingHandler");
-            g_Conn = new GridConnection(SDGUtils.ParseKey(privateKey), scheduler);
+            conn = new GridConnection(SDGUtils.ParseKey(privateKey), scheduler);
+            connections.put(privateKey, conn);
         }
 
-        if (g_Conn.getState() != Connection.State.CONNECTED) {
-            g_Conn.connect(GridConnection.Danfoss);
+        if (conn.getState() != Connection.State.CONNECTED) {
+            conn.connect(GridConnection.Danfoss);
             logger.info("Successfully connected to Danfoss grid");
         }
 
-        return g_Conn;
+        return conn;
     }
 
-    public static synchronized void UpdatePrivateKey(String newKey) {
-        if (g_Conn != null && !newKey.equals(privateKey)) {
-            // Will reconnect on demand
-            closeConnection();
-        }
-        privateKey = newKey;
+    public static synchronized void AddUser(String privateKey) {
+        numUsers.merge(privateKey, 1, Integer::sum);
     }
 
-    public static synchronized void AddUser() {
-        numUsers++;
-    }
-
-    public static synchronized void RemoveUser() {
-        if (--numUsers > 0) {
+    public static synchronized void RemoveUser(String privateKey) {
+        Integer users = numUsers.get(privateKey);
+        if (users == null) {
             return;
         }
 
-        if (g_Conn == null) {
+        if (users > 1) {
+            numUsers.put(privateKey, users - 1);
             return;
         }
 
-        logger.info("Last user is gone, disconnecting from Danfoss grid");
-        closeConnection();
-    }
+        numUsers.remove(privateKey);
 
-    private static void closeConnection() {
-        g_Conn.close();
-        g_Conn = null;
-        logger.info("Grid connection closed");
+        GridConnection conn = connections.remove(privateKey);
+        if (conn != null) {
+            logger.info("Last user is gone, disconnecting from Danfoss grid");
+            conn.close();
+        }
     }
 }
