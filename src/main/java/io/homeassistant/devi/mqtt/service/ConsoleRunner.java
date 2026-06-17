@@ -2,6 +2,7 @@ package io.homeassistant.devi.mqtt.service;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
@@ -99,24 +100,35 @@ public class ConsoleRunner {
         commandMediator = new CommandMediator();
         mqttService.registerMediator(commandMediator);
 
-        // Read Devi configuration
-        JsonObject deviConfig = gson.fromJson(new JsonReader(new FileReader(deviConfigFile)), JsonObject.class);
-        String userName = deviConfig.get("userName").getAsString();
-        String privateKey = deviConfig.get("privateKey").getAsString();
+        // Read Devi configuration - supports single house (JsonObject) and multiple houses (JsonArray)
+        JsonElement deviConfigElement = gson.fromJson(new JsonReader(new FileReader(deviConfigFile)), JsonElement.class);
+
+        JsonArray houses = new JsonArray();
+        if (deviConfigElement.isJsonArray()) {
+            houses = deviConfigElement.getAsJsonArray();
+        } else {
+            houses.add(deviConfigElement.getAsJsonObject());
+        }
 
         int deviceNumber = 0;
 
-        for (JsonElement room : deviConfig.getAsJsonArray("rooms")) {
-            String devicePeerID = room.getAsJsonObject().get("devicePeerID").getAsString();
-            String deviceSN = room.getAsJsonObject().get("serialNumber").getAsString();
+        for (JsonElement houseElement : houses) {
+            JsonObject deviConfig = houseElement.getAsJsonObject();
+            String userName = deviConfig.get("userName").getAsString();
+            String privateKey = deviConfig.get("privateKey").getAsString();
 
-            Map<String, String> valuesMap = new HashMap<>();
-            valuesMap.put("deviceSN", deviceSN);
-            valuesMap.put("deviceNumber", String.valueOf(deviceNumber++));
+            for (JsonElement room : deviConfig.getAsJsonArray("rooms")) {
+                String devicePeerID = room.getAsJsonObject().get("devicePeerID").getAsString();
+                String deviceSN = room.getAsJsonObject().get("serialNumber").getAsString();
 
-            readAndProcessTemplates(autoDiscoveryTemplatesPath, valuesMap);
+                Map<String, String> valuesMap = new HashMap<>();
+                valuesMap.put("deviceSN", deviceSN);
+                valuesMap.put("deviceNumber", String.valueOf(deviceNumber++));
 
-            HandleThermostat(devicePeerID, userName, privateKey, deviceSN);
+                readAndProcessTemplates(autoDiscoveryTemplatesPath, valuesMap);
+
+                HandleThermostat(devicePeerID, userName, privateKey, deviceSN);
+            }
         }
     }
 
@@ -212,7 +224,7 @@ public class ConsoleRunner {
         // Calling the update method
         DanfossBindingConfig.update(configMap, configAdmin);
 
-        DeviRegHandler deviRegHandler = new DeviRegHandler(new MockThing(devicePeerID));
+        DeviRegHandler deviRegHandler = new DeviRegHandler(new MockThing(devicePeerID, privateKey));
 
         commandMediator.addDeviRegHandler(deviceSN, deviRegHandler);
 
@@ -247,8 +259,6 @@ public class ConsoleRunner {
         deviRegHandler.handleCommand(away_temp_uid, new DecimalType(10.0));
          */
 
-
-
         // Requesting refresh, thermostat will respond latest value
         ChannelUID refreshUptime = new ChannelUID(new ThingUID("cmd", "danfoss", "devismart"), CHANNEL_ON_TIME_TOTAL);
         deviRegHandler.handleCommand(refreshUptime, RefreshType.REFRESH);
@@ -258,7 +268,3 @@ public class ConsoleRunner {
 
     }
 }
-
-
-
-

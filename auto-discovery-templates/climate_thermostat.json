@@ -4,7 +4,7 @@
     "name": "DeviReg Smart Thermostat",
     "device_class": "climate",
     "unique_id": "id_${deviceSN}_devi_thermostat",
-    "default_entity_id": "devireg_${deviceSN}_thermostat",
+    "object_id": "devireg_${deviceSN}_thermostat",
 
 	"availability_topic": "devi/state/${deviceSN}/binary_sensor_device_connected",
 	"payload_available": "ON",

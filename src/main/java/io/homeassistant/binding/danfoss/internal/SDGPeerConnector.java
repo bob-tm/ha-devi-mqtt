@@ -36,6 +36,8 @@ public class SDGPeerConnector {
     private ScheduledExecutorService scheduler;
     private Logger logger = LoggerFactory.getLogger(SDGPeerConnector.class);
     private byte[] peerId;
+    private byte[] privateKey;
+    private @Nullable GridConnection grid;
     private DeviSmartConnection connection;
     private @Nullable Future<?> reconnectReq;
     private @Nullable Future<?> watchdog;
@@ -46,10 +48,10 @@ public class SDGPeerConnector {
         this.scheduler = scheduler;
     }
 
-    public void initialize(String peerIdStr) {
+    public void initialize(String peerIdStr, String privateKeyStr) {
         logger.trace("initialize()");
 
-        GridConnectionKeeper.AddUser();
+        privateKey = SDGUtils.ParseKey(privateKeyStr);
 
         peerId = SDGUtils.ParseKey(peerIdStr);
         if (peerId == null) {
@@ -111,9 +113,13 @@ public class SDGPeerConnector {
             if (conn != null) {
                 conn.close();
             }
-        });
 
-        GridConnectionKeeper.RemoveUser();
+            GridConnection g = grid;
+            grid = null;
+            if (g != null) {
+                g.close();
+            }
+        });
     }
 
     private void connect() {
@@ -126,7 +132,13 @@ public class SDGPeerConnector {
             }
 
             try {
-                GridConnection grid = GridConnectionKeeper.getConnection();
+                if (grid == null) {
+                    grid = new GridConnection(privateKey, scheduler);
+                }
+                if (grid.getState() != Connection.State.CONNECTED) {
+                    grid.connect(GridConnection.Danfoss);
+                    logger.info("Successfully connected to Danfoss grid");
+                }
 
                 logger.info("Connecting to peer {}", SDG.bin2hex(peerId));
                 connection.connectToRemote(grid, peerId, Dominion.ProtocolName);
